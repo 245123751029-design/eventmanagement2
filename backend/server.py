@@ -13,7 +13,7 @@ from datetime import datetime, timezone, timedelta
 import qrcode
 from io import BytesIO
 import requests
-from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
+import stripe
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -216,15 +216,18 @@ async def create_session(request: Request, response: Response):
         raise HTTPException(status_code=400, detail="Missing session ID")
     
     # Call Emergent auth service
-    try:
-        auth_response = requests.get(
-            "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-            headers={"X-Session-ID": session_id}
-        )
-        auth_response.raise_for_status()
-        user_data = auth_response.json()
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid session: {str(e)}")
+    auth_response = requests.get(
+        "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
+        headers={"X-Session-ID": session_id}
+    )
+
+    if auth_response.status_code != 200:
+        raise HTTPException(status_code=400, detail="Invalid session ID")
+
+    # FIX: extract JSON
+    user_data = auth_response.json()
+
+
     
     # Check if user exists
     existing_user = await db.users.find_one({"email": user_data["email"]}, {"_id": 0})
