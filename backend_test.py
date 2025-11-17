@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Event Management App Backend API Testing
-Tests all endpoints including auth, events, bookings, and payments
+Event Management App Backend API Testing - Role System Focus
+Tests user role system, role-based access control, and admin endpoints
 """
 
 import requests
@@ -11,12 +11,16 @@ import time
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional
 
-class EventAppTester:
+class EventAppRoleTester:
     def __init__(self, base_url="https://ticketmaster-70.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
-        self.session_token = None
-        self.user_id = None
+        self.admin_token = None
+        self.admin_id = None
+        self.attendee_token = None
+        self.attendee_id = None
+        self.organizer_token = None
+        self.organizer_id = None
         self.tests_run = 0
         self.tests_passed = 0
         self.test_results = []
