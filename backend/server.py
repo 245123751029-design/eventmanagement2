@@ -395,12 +395,13 @@ async def get_event(event_id: str):
 
 @api_router.put("/events/{event_id}", response_model=Event)
 async def update_event(event_id: str, update_data: EventUpdate, user: User = Depends(require_auth)):
-    """Update event (owner only)"""
+    """Update event (owner or admin)"""
     event = await db.events.find_one({"id": event_id}, {"_id": 0})
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     
-    if event["creator_id"] != user.id:
+    # Allow owner or admin to update
+    if event["creator_id"] != user.id and user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
     
     update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
