@@ -194,6 +194,18 @@ async def require_auth(user: Optional[User] = Depends(get_current_user)) -> User
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user
 
+async def require_organizer(user: User = Depends(require_auth)) -> User:
+    """Require organizer or admin role"""
+    if user.role not in ["organizer", "admin"]:
+        raise HTTPException(status_code=403, detail="Organizer or admin role required")
+    return user
+
+async def require_admin(user: User = Depends(require_auth)) -> User:
+    """Require admin role"""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required")
+    return user
+
 # ============ AUTH ROUTES ============
 
 @api_router.post("/auth/session")
