@@ -341,8 +341,8 @@ async def init_categories():
 # ============ EVENT ROUTES ============
 
 @api_router.post("/events", response_model=Event)
-async def create_event(event_data: EventCreate, user: User = Depends(require_auth)):
-    """Create a new event"""
+async def create_event(event_data: EventCreate, user: User = Depends(require_organizer)):
+    """Create a new event (requires organizer or admin role)"""
     event = Event(
         creator_id=user.id,
         **event_data.model_dump()
