@@ -181,18 +181,51 @@ class EventAppRoleTester:
         except Exception as e:
             self.log_test("Health Check", False, str(e))
 
-    def test_auth_endpoints(self):
-        """Test authentication endpoints"""
-        print("\n🔐 Testing Authentication...")
+    def test_user_role_assignment(self):
+        """Test user role assignment and first-user-as-admin logic"""
+        print("\n👑 Testing User Role Assignment...")
         
-        # Test /auth/me with valid token
-        success, data = self.make_request('GET', 'auth/me', use_auth=True)
-        self.log_test("GET /auth/me (authenticated)", success, 
-                     f"User: {data.get('name', 'Unknown')}" if success else str(data))
+        # Test admin user (first user should be admin)
+        success, data = self.make_request('GET', 'auth/me', use_auth=True, token=self.admin_token)
+        if success and data.get('role') == 'admin':
+            self.log_test("First user gets admin role", True, f"Role: {data.get('role')}")
+        else:
+            self.log_test("First user gets admin role", False, f"Expected admin, got: {data.get('role', 'unknown')}")
         
-        # Test /auth/me without token (should fail)
-        success, data = self.make_request('GET', 'auth/me', expected_status=401)
-        self.log_test("GET /auth/me (unauthenticated)", success, "Correctly rejected")
+        # Test attendee user (default role)
+        success, data = self.make_request('GET', 'auth/me', use_auth=True, token=self.attendee_token)
+        if success and data.get('role') == 'attendee':
+            self.log_test("Second user gets attendee role", True, f"Role: {data.get('role')}")
+        else:
+            self.log_test("Second user gets attendee role", False, f"Expected attendee, got: {data.get('role', 'unknown')}")
+        
+        # Test role selection (change attendee to organizer)
+        role_data = {"role": "organizer"}
+        success, data = self.make_request('PATCH', 'auth/select-role', role_data, 
+                                        expected_status=200, use_auth=True, token=self.organizer_token)
+        if success:
+            self.log_test("PATCH /auth/select-role (attendee to organizer)", True, "Role changed successfully")
+            
+            # Verify role change
+            success, data = self.make_request('GET', 'auth/me', use_auth=True, token=self.organizer_token)
+            if success and data.get('role') == 'organizer':
+                self.log_test("Role change verification", True, f"New role: {data.get('role')}")
+            else:
+                self.log_test("Role change verification", False, f"Expected organizer, got: {data.get('role', 'unknown')}")
+        else:
+            self.log_test("PATCH /auth/select-role (attendee to organizer)", False, str(data))
+        
+        # Test invalid role selection
+        invalid_role_data = {"role": "invalid_role"}
+        success, data = self.make_request('PATCH', 'auth/select-role', invalid_role_data, 
+                                        expected_status=400, use_auth=True, token=self.attendee_token)
+        self.log_test("PATCH /auth/select-role (invalid role)", success, "Correctly rejected invalid role")
+        
+        # Test admin cannot change their role
+        admin_role_data = {"role": "attendee"}
+        success, data = self.make_request('PATCH', 'auth/select-role', admin_role_data, 
+                                        expected_status=403, use_auth=True, token=self.admin_token)
+        self.log_test("PATCH /auth/select-role (admin cannot change)", success, "Admin role change correctly blocked")
 
     def test_categories(self):
         """Test category endpoints"""
