@@ -243,42 +243,84 @@ class EventAppRoleTester:
             self.log_test("GET /categories", False, str(data))
             return []
 
-    def test_events(self, categories: list) -> Optional[str]:
-        """Test event endpoints"""
-        print("\n🎪 Testing Events...")
+    def test_role_based_access_control(self):
+        """Test role-based access control for event creation"""
+        print("\n🔒 Testing Role-Based Access Control...")
         
-        # Test GET events (public)
-        success, data = self.make_request('GET', 'events')
-        self.log_test("GET /events (public)", success, 
-                     f"Found {len(data)} events" if success and isinstance(data, list) else str(data))
+        # Test event data
+        event_data = {
+            "title": f"Role Test Event {int(time.time())}",
+            "description": "Testing role-based access control",
+            "date": (datetime.now() + timedelta(days=30)).isoformat(),
+            "location": "Test Venue, Test City",
+            "capacity": 100,
+            "category": "Conference",
+            "image_url": "https://via.placeholder.com/400x300"
+        }
         
-        # Test GET my events (authenticated)
-        success, data = self.make_request('GET', 'events/my-events/list', use_auth=True)
-        self.log_test("GET /events/my-events/list", success, 
-                     f"Found {len(data)} user events" if success and isinstance(data, list) else str(data))
+        # Test attendee CANNOT create events (should get 403)
+        success, data = self.make_request('POST', 'events', event_data, 
+                                        expected_status=403, use_auth=True, token=self.attendee_token)
+        self.log_test("POST /events (attendee - should fail)", success, 
+                     "Correctly blocked attendee from creating event")
         
-        # Test CREATE event
-        if categories:
-            event_data = {
-                "title": f"Test Event {int(time.time())}",
-                "description": "This is a test event for API testing",
-                "date": (datetime.now() + timedelta(days=30)).isoformat(),
-                "location": "Test Venue, Test City",
-                "capacity": 100,
-                "category": categories[0]['name'],
-                "image_url": "https://via.placeholder.com/400x300"
-            }
-            
-            success, data = self.make_request('POST', 'events', event_data, 
-                                            expected_status=200, use_auth=True)
-            if success:
-                event_id = data.get('id')
-                self.log_test("POST /events", True, f"Created event: {event_id}")
-                return event_id
-            else:
-                self.log_test("POST /events", False, str(data))
+        # Test organizer CAN create events
+        success, data = self.make_request('POST', 'events', event_data, 
+                                        expected_status=200, use_auth=True, token=self.organizer_token)
+        if success:
+            organizer_event_id = data.get('id')
+            self.log_test("POST /events (organizer - should succeed)", True, 
+                         f"Organizer created event: {organizer_event_id}")
+        else:
+            self.log_test("POST /events (organizer - should succeed)", False, str(data))
+            organizer_event_id = None
         
-        return None
+        # Test admin CAN create events
+        success, data = self.make_request('POST', 'events', event_data, 
+                                        expected_status=200, use_auth=True, token=self.admin_token)
+        if success:
+            admin_event_id = data.get('id')
+            self.log_test("POST /events (admin - should succeed)", True, 
+                         f"Admin created event: {admin_event_id}")
+        else:
+            self.log_test("POST /events (admin - should succeed)", False, str(data))
+            admin_event_id = None
+        
+        return organizer_event_id, admin_event_id
+    
+    def test_event_ownership_control(self, organizer_event_id: str, admin_event_id: str):
+        """Test that organizers can only edit their own events, but admins can edit any"""
+        print("\n🏠 Testing Event Ownership Control...")
+        
+        if not organizer_event_id or not admin_event_id:
+            print("⚠️ Skipping ownership tests - missing event IDs")
+            return
+        
+        update_data = {"title": "Updated Event Title"}
+        
+        # Test organizer can edit their own event
+        success, data = self.make_request('PUT', f'events/{organizer_event_id}', update_data,
+                                        expected_status=200, use_auth=True, token=self.organizer_token)
+        self.log_test("PUT /events/{id} (organizer owns event)", success, 
+                     "Organizer can edit own event")
+        
+        # Test organizer CANNOT edit admin's event
+        success, data = self.make_request('PUT', f'events/{admin_event_id}', update_data,
+                                        expected_status=403, use_auth=True, token=self.organizer_token)
+        self.log_test("PUT /events/{id} (organizer doesn't own)", success, 
+                     "Organizer correctly blocked from editing others' events")
+        
+        # Test admin CAN edit any event (including organizer's)
+        success, data = self.make_request('PUT', f'events/{organizer_event_id}', update_data,
+                                        expected_status=200, use_auth=True, token=self.admin_token)
+        self.log_test("PUT /events/{id} (admin can edit any)", success, 
+                     "Admin can edit any event")
+        
+        # Test admin can edit their own event
+        success, data = self.make_request('PUT', f'events/{admin_event_id}', update_data,
+                                        expected_status=200, use_auth=True, token=self.admin_token)
+        self.log_test("PUT /events/{id} (admin owns event)", success, 
+                     "Admin can edit own event")
 
     def test_ticket_types(self, event_id: str) -> list:
         """Test ticket type endpoints"""
