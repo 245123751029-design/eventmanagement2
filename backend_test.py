@@ -42,13 +42,15 @@ class EventAppRoleTester:
         })
 
     def make_request(self, method: str, endpoint: str, data: Dict = None, 
-                    expected_status: int = 200, use_auth: bool = False) -> tuple[bool, Dict]:
+                    expected_status: int = 200, use_auth: bool = False, token: str = None) -> tuple[bool, Dict]:
         """Make HTTP request and validate response"""
         url = f"{self.api_url}/{endpoint}"
         headers = {'Content-Type': 'application/json'}
         
-        if use_auth and self.session_token:
-            headers['Authorization'] = f'Bearer {self.session_token}'
+        if use_auth:
+            auth_token = token or self.admin_token  # Default to admin token
+            if auth_token:
+                headers['Authorization'] = f'Bearer {auth_token}'
 
         try:
             if method == 'GET':
@@ -57,6 +59,8 @@ class EventAppRoleTester:
                 response = requests.post(url, json=data, headers=headers, timeout=30)
             elif method == 'PUT':
                 response = requests.put(url, json=data, headers=headers, timeout=30)
+            elif method == 'PATCH':
+                response = requests.patch(url, json=data, headers=headers, timeout=30)
             elif method == 'DELETE':
                 response = requests.delete(url, headers=headers, timeout=30)
             else:
