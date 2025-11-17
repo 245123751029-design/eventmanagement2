@@ -21,6 +21,7 @@ export const AuthContext = React.createContext();
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showRoleSelection, setShowRoleSelection] = useState(false);
 
   useEffect(() => {
     // Check for session_id in URL hash (after OAuth)
