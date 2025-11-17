@@ -12,6 +12,7 @@ import CreateEvent from '@/pages/CreateEvent';
 import MyEvents from '@/pages/MyEvents';
 import MyBookings from '@/pages/MyBookings';
 import BookingSuccess from '@/pages/BookingSuccess';
+import AdminDashboard from '@/pages/AdminDashboard';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
