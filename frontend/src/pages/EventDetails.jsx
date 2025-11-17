@@ -257,7 +257,7 @@ const EventDetails = () => {
           <div className="space-y-4 mt-4">
             <div>
               <label className="block text-sm font-medium mb-2">Ticket Type</label>
-              <Select value={selectedTicketType} onValueChange={setSelectedTicketType}>
+              <Select value={selectedTicketType || undefined} onValueChange={setSelectedTicketType}>
                 <SelectTrigger data-testid="ticket-type-select">
                   <SelectValue placeholder="Select ticket type" />
                 </SelectTrigger>
