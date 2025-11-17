@@ -231,17 +231,89 @@ class EventAppRoleTester:
                                         expected_status=403, use_auth=True, token=self.admin_token)
         self.log_test("PATCH /auth/select-role (admin cannot change)", success, "Admin role change correctly blocked")
 
-    def test_categories(self):
-        """Test category endpoints"""
-        print("\n📂 Testing Categories...")
+    def test_admin_endpoints(self):
+        """Test admin-only endpoints"""
+        print("\n👨‍💼 Testing Admin Endpoints...")
         
-        success, data = self.make_request('GET', 'categories')
-        if success and isinstance(data, list) and len(data) > 0:
-            self.log_test("GET /categories", True, f"Found {len(data)} categories")
-            return data
+        # Test admin stats endpoint
+        success, data = self.make_request('GET', 'admin/stats', use_auth=True, token=self.admin_token)
+        if success and isinstance(data, dict):
+            stats = data
+            expected_keys = ['total_users', 'total_events', 'total_bookings', 'total_revenue', 'role_distribution']
+            has_all_keys = all(key in stats for key in expected_keys)
+            self.log_test("GET /admin/stats (admin)", has_all_keys, 
+                         f"Stats: {stats.get('total_users', 0)} users, {stats.get('total_events', 0)} events")
         else:
-            self.log_test("GET /categories", False, str(data))
-            return []
+            self.log_test("GET /admin/stats (admin)", False, str(data))
+        
+        # Test non-admin cannot access stats
+        success, data = self.make_request('GET', 'admin/stats', expected_status=403, 
+                                        use_auth=True, token=self.attendee_token)
+        self.log_test("GET /admin/stats (attendee - should fail)", success, 
+                     "Correctly blocked non-admin from stats")
+        
+        success, data = self.make_request('GET', 'admin/stats', expected_status=403, 
+                                        use_auth=True, token=self.organizer_token)
+        self.log_test("GET /admin/stats (organizer - should fail)", success, 
+                     "Correctly blocked non-admin from stats")
+        
+        # Test admin users endpoint
+        success, data = self.make_request('GET', 'admin/users', use_auth=True, token=self.admin_token)
+        if success and isinstance(data, list):
+            self.log_test("GET /admin/users (admin)", True, f"Found {len(data)} users")
+            
+            # Test role update
+            if len(data) > 1:
+                # Find a non-admin user to test role update
+                target_user = next((u for u in data if u['role'] != 'admin' and u['id'] != self.admin_id), None)
+                if target_user:
+                    role_update = {"role": "organizer"}
+                    success, update_data = self.make_request('PATCH', f'admin/users/{target_user["id"]}/role', 
+                                                           role_update, expected_status=200, 
+                                                           use_auth=True, token=self.admin_token)
+                    self.log_test("PATCH /admin/users/{id}/role (admin)", success, 
+                                 f"Updated user role to organizer")
+                    
+                    # Test non-admin cannot update roles
+                    success, update_data = self.make_request('PATCH', f'admin/users/{target_user["id"]}/role', 
+                                                           role_update, expected_status=403, 
+                                                           use_auth=True, token=self.attendee_token)
+                    self.log_test("PATCH /admin/users/{id}/role (attendee - should fail)", success, 
+                                 "Correctly blocked non-admin from role updates")
+        else:
+            self.log_test("GET /admin/users (admin)", False, str(data))
+        
+        # Test non-admin cannot access users
+        success, data = self.make_request('GET', 'admin/users', expected_status=403, 
+                                        use_auth=True, token=self.attendee_token)
+        self.log_test("GET /admin/users (attendee - should fail)", success, 
+                     "Correctly blocked non-admin from users list")
+        
+        # Test admin events endpoint
+        success, data = self.make_request('GET', 'admin/events', use_auth=True, token=self.admin_token)
+        if success and isinstance(data, list):
+            self.log_test("GET /admin/events (admin)", True, f"Found {len(data)} events")
+        else:
+            self.log_test("GET /admin/events (admin)", False, str(data))
+        
+        # Test non-admin cannot access admin events
+        success, data = self.make_request('GET', 'admin/events', expected_status=403, 
+                                        use_auth=True, token=self.organizer_token)
+        self.log_test("GET /admin/events (organizer - should fail)", success, 
+                     "Correctly blocked non-admin from admin events")
+        
+        # Test admin bookings endpoint
+        success, data = self.make_request('GET', 'admin/bookings', use_auth=True, token=self.admin_token)
+        if success and isinstance(data, list):
+            self.log_test("GET /admin/bookings (admin)", True, f"Found {len(data)} bookings")
+        else:
+            self.log_test("GET /admin/bookings (admin)", False, str(data))
+        
+        # Test non-admin cannot access admin bookings
+        success, data = self.make_request('GET', 'admin/bookings', expected_status=403, 
+                                        use_auth=True, token=self.attendee_token)
+        self.log_test("GET /admin/bookings (attendee - should fail)", success, 
+                     "Correctly blocked non-admin from admin bookings")
 
     def test_role_based_access_control(self):
         """Test role-based access control for event creation"""
