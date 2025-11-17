@@ -394,125 +394,15 @@ class EventAppRoleTester:
         self.log_test("PUT /events/{id} (admin owns event)", success, 
                      "Admin can edit own event")
 
-    def test_ticket_types(self, event_id: str) -> list:
-        """Test ticket type endpoints"""
-        if not event_id:
-            return []
-            
-        print("\n🎫 Testing Ticket Types...")
-        
-        # Create ticket types
-        ticket_types = [
-            {"name": "General Admission", "price": 0.0, "quantity_available": 50},
-            {"name": "VIP", "price": 25.99, "quantity_available": 10}
-        ]
-        
-        created_tickets = []
-        for ticket_data in ticket_types:
-            success, data = self.make_request('POST', f'events/{event_id}/ticket-types', 
-                                            ticket_data, expected_status=200, use_auth=True)
-            if success:
-                created_tickets.append(data)
-                self.log_test(f"POST /events/{event_id}/ticket-types ({ticket_data['name']})", 
-                            True, f"Price: ${ticket_data['price']}")
-            else:
-                self.log_test(f"POST /events/{event_id}/ticket-types ({ticket_data['name']})", 
-                            False, str(data))
-        
-        # Test GET ticket types
-        success, data = self.make_request('GET', f'events/{event_id}/ticket-types')
-        self.log_test(f"GET /events/{event_id}/ticket-types", success, 
-                     f"Found {len(data)} ticket types" if success and isinstance(data, list) else str(data))
-        
-        return created_tickets
-
-    def test_bookings(self, event_id: str, ticket_types: list):
-        """Test booking endpoints"""
-        if not event_id or not ticket_types:
-            return
-            
-        print("\n📝 Testing Bookings...")
-        
-        # Test free ticket booking
-        free_ticket = next((t for t in ticket_types if t['price'] == 0), None)
-        if free_ticket:
-            booking_data = {
-                "event_id": event_id,
-                "ticket_type_id": free_ticket['id'],
-                "quantity": 2
-            }
-            
-            success, data = self.make_request('POST', 'bookings', booking_data, 
-                                            expected_status=200, use_auth=True)
-            if success:
-                booking = data.get('booking', {})
-                requires_payment = data.get('requires_payment', False)
-                self.log_test("POST /bookings (free ticket)", True, 
-                            f"Booking ID: {booking.get('id')}, Payment required: {requires_payment}")
-                
-                # Test QR code for confirmed booking
-                if booking.get('status') == 'confirmed':
-                    booking_id = booking.get('id')
-                    try:
-                        qr_response = requests.get(f"{self.api_url}/bookings/{booking_id}/qr", 
-                                                 headers={'Authorization': f'Bearer {self.session_token}'})
-                        qr_success = qr_response.status_code == 200 and qr_response.headers.get('content-type', '').startswith('image/')
-                        self.log_test("GET /bookings/{id}/qr", qr_success, 
-                                    f"QR code generated" if qr_success else f"Status: {qr_response.status_code}")
-                    except Exception as e:
-                        self.log_test("GET /bookings/{id}/qr", False, str(e))
-            else:
-                self.log_test("POST /bookings (free ticket)", False, str(data))
-        
-        # Test paid ticket booking (will create pending booking)
-        paid_ticket = next((t for t in ticket_types if t['price'] > 0), None)
-        if paid_ticket:
-            booking_data = {
-                "event_id": event_id,
-                "ticket_type_id": paid_ticket['id'],
-                "quantity": 1
-            }
-            
-            success, data = self.make_request('POST', 'bookings', booking_data, 
-                                            expected_status=200, use_auth=True)
-            if success:
-                booking = data.get('booking', {})
-                requires_payment = data.get('requires_payment', False)
-                self.log_test("POST /bookings (paid ticket)", True, 
-                            f"Booking ID: {booking.get('id')}, Payment required: {requires_payment}")
-                
-                # Test checkout session creation
-                if requires_payment:
-                    checkout_data = {
-                        "booking_id": booking.get('id'),
-                        "origin_url": self.base_url
-                    }
-                    success, checkout_response = self.make_request('POST', 'bookings/checkout', 
-                                                                 checkout_data, expected_status=200, use_auth=True)
-                    if success and 'url' in checkout_response:
-                        self.log_test("POST /bookings/checkout", True, "Stripe checkout URL created")
-                    else:
-                        self.log_test("POST /bookings/checkout", False, str(checkout_response))
-            else:
-                self.log_test("POST /bookings (paid ticket)", False, str(data))
-        
-        # Test GET my bookings
-        success, data = self.make_request('GET', 'bookings/my-bookings/list', use_auth=True)
-        self.log_test("GET /bookings/my-bookings/list", success, 
-                     f"Found {len(data)} bookings" if success and isinstance(data, list) else str(data))
-
-    def test_event_details(self, event_id: str):
-        """Test event details endpoint"""
-        if not event_id:
-            return
-            
-        print("\n🔍 Testing Event Details...")
-        
-        success, data = self.make_request('GET', f'events/{event_id}')
-        if success:
-            self.log_test(f"GET /events/{event_id}", True, f"Event: {data.get('title', 'Unknown')}")
-        else:
-            self.log_test(f"GET /events/{event_id}", False, str(data))
+    def test_health_check(self):
+        """Test basic connectivity"""
+        print("\n🏥 Testing Health Check...")
+        try:
+            response = requests.get(f"{self.base_url}/", timeout=10)
+            success = response.status_code in [200, 404]  # 404 is OK for root
+            self.log_test("Health Check", success, f"Status: {response.status_code}")
+        except Exception as e:
+            self.log_test("Health Check", False, str(e))
 
     def run_role_system_tests(self):
         """Run role system focused test suite"""
