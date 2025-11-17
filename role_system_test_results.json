@@ -1,0 +1,119 @@
+{
+  "timestamp": "2025-11-17T14:54:04.588775",
+  "test_type": "role_system_tests",
+  "summary": {
+    "total_tests": 18,
+    "passed_tests": 1,
+    "success_rate": 5.555555555555555
+  },
+  "test_details": [
+    {
+      "test": "Health Check",
+      "success": true,
+      "details": "Status: 200",
+      "timestamp": "2025-11-17T14:54:03.688286"
+    },
+    {
+      "test": "First user gets admin role",
+      "success": false,
+      "details": "Expected admin, got: unknown",
+      "timestamp": "2025-11-17T14:54:03.746207"
+    },
+    {
+      "test": "Second user gets attendee role",
+      "success": false,
+      "details": "Expected attendee, got: unknown",
+      "timestamp": "2025-11-17T14:54:03.815726"
+    },
+    {
+      "test": "PATCH /auth/select-role (attendee to organizer)",
+      "success": false,
+      "details": "{'detail': 'Not authenticated'}",
+      "timestamp": "2025-11-17T14:54:03.865674"
+    },
+    {
+      "test": "PATCH /auth/select-role (invalid role)",
+      "success": false,
+      "details": "Correctly rejected invalid role",
+      "timestamp": "2025-11-17T14:54:03.928454"
+    },
+    {
+      "test": "PATCH /auth/select-role (admin cannot change)",
+      "success": false,
+      "details": "Admin role change correctly blocked",
+      "timestamp": "2025-11-17T14:54:03.987047"
+    },
+    {
+      "test": "POST /events (attendee - should fail)",
+      "success": false,
+      "details": "Correctly blocked attendee from creating event",
+      "timestamp": "2025-11-17T14:54:04.035805"
+    },
+    {
+      "test": "POST /events (organizer - should succeed)",
+      "success": false,
+      "details": "{'detail': 'Not authenticated'}",
+      "timestamp": "2025-11-17T14:54:04.085770"
+    },
+    {
+      "test": "POST /events (admin - should succeed)",
+      "success": false,
+      "details": "{'detail': 'Not authenticated'}",
+      "timestamp": "2025-11-17T14:54:04.130397"
+    },
+    {
+      "test": "GET /admin/stats (admin)",
+      "success": false,
+      "details": "{'detail': 'Not authenticated'}",
+      "timestamp": "2025-11-17T14:54:04.179114"
+    },
+    {
+      "test": "GET /admin/stats (attendee - should fail)",
+      "success": false,
+      "details": "Correctly blocked non-admin from stats",
+      "timestamp": "2025-11-17T14:54:04.224087"
+    },
+    {
+      "test": "GET /admin/stats (organizer - should fail)",
+      "success": false,
+      "details": "Correctly blocked non-admin from stats",
+      "timestamp": "2025-11-17T14:54:04.273215"
+    },
+    {
+      "test": "GET /admin/users (admin)",
+      "success": false,
+      "details": "{'detail': 'Not authenticated'}",
+      "timestamp": "2025-11-17T14:54:04.324270"
+    },
+    {
+      "test": "GET /admin/users (attendee - should fail)",
+      "success": false,
+      "details": "Correctly blocked non-admin from users list",
+      "timestamp": "2025-11-17T14:54:04.377980"
+    },
+    {
+      "test": "GET /admin/events (admin)",
+      "success": false,
+      "details": "{'detail': 'Not authenticated'}",
+      "timestamp": "2025-11-17T14:54:04.430443"
+    },
+    {
+      "test": "GET /admin/events (organizer - should fail)",
+      "success": false,
+      "details": "Correctly blocked non-admin from admin events",
+      "timestamp": "2025-11-17T14:54:04.473265"
+    },
+    {
+      "test": "GET /admin/bookings (admin)",
+      "success": false,
+      "details": "{'detail': 'Not authenticated'}",
+      "timestamp": "2025-11-17T14:54:04.521126"
+    },
+    {
+      "test": "GET /admin/bookings (attendee - should fail)",
+      "success": false,
+      "details": "Correctly blocked non-admin from admin bookings",
+      "timestamp": "2025-11-17T14:54:04.588734"
+    }
+  ]
+}
