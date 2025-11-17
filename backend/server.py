@@ -254,7 +254,7 @@ async def create_session(request: Request, response: Response):
         max_age=7*24*60*60
     )
     
-    return {"success": True}
+    return {"success": True, "is_new_user": is_new_user}
 
 @api_router.get("/auth/me")
 async def get_me(user: User = Depends(require_auth)):
