@@ -73,24 +73,55 @@ class EventAppRoleTester:
         except Exception as e:
             return False, {"error": str(e)}
 
-    def setup_test_user(self) -> bool:
-        """Create test user and session in MongoDB"""
-        print("\n🔧 Setting up test user...")
+    def clear_database(self) -> bool:
+        """Clear database to test first-user-as-admin logic"""
+        print("\n🗑️ Clearing database for role testing...")
         
-        # Generate unique test data
+        mongo_commands = """
+        use test_database;
+        db.users.deleteMany({});
+        db.user_sessions.deleteMany({});
+        db.events.deleteMany({});
+        db.bookings.deleteMany({});
+        db.ticket_types.deleteMany({});
+        """
+        
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['mongosh', '--eval', mongo_commands],
+                capture_output=True, text=True, timeout=30
+            )
+            
+            if result.returncode == 0:
+                print("✅ Database cleared successfully")
+                return True
+            else:
+                print(f"❌ Database clear failed: {result.stderr}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Database clear error: {str(e)}")
+            return False
+
+    def create_test_user(self, role: str, is_first_user: bool = False) -> tuple[str, str]:
+        """Create test user with specific role"""
         timestamp = int(time.time())
-        user_id = f"test-user-{timestamp}"
-        session_token = f"test_session_{timestamp}"
-        email = f"test.user.{timestamp}@example.com"
+        user_id = f"test-{role}-{timestamp}"
+        session_token = f"session_{role}_{timestamp}"
+        email = f"test.{role}.{timestamp}@example.com"
         
-        # MongoDB commands to create test user and session
+        # First user should automatically become admin regardless of specified role
+        actual_role = "admin" if is_first_user else role
+        
         mongo_commands = f"""
         use test_database;
         db.users.insertOne({{
             id: "{user_id}",
             email: "{email}",
-            name: "Test User {timestamp}",
+            name: "Test {role.title()} User",
             picture: "https://via.placeholder.com/150",
+            role: "{actual_role}",
             created_at: new Date()
         }});
         db.user_sessions.insertOne({{
@@ -109,18 +140,36 @@ class EventAppRoleTester:
             )
             
             if result.returncode == 0:
-                self.session_token = session_token
-                self.user_id = user_id
-                print(f"✅ Test user created: {email}")
-                print(f"✅ Session token: {session_token[:20]}...")
-                return True
+                print(f"✅ {role.title()} user created: {email} (actual role: {actual_role})")
+                return user_id, session_token
             else:
-                print(f"❌ MongoDB setup failed: {result.stderr}")
-                return False
+                print(f"❌ {role.title()} user creation failed: {result.stderr}")
+                return None, None
                 
         except Exception as e:
-            print(f"❌ MongoDB setup error: {str(e)}")
+            print(f"❌ {role.title()} user creation error: {str(e)}")
+            return None, None
+
+    def setup_role_test_users(self) -> bool:
+        """Setup test users for role testing"""
+        print("\n🔧 Setting up role test users...")
+        
+        # Create admin user (first user)
+        self.admin_id, self.admin_token = self.create_test_user("admin", is_first_user=True)
+        if not self.admin_token:
             return False
+        
+        # Create attendee user
+        self.attendee_id, self.attendee_token = self.create_test_user("attendee")
+        if not self.attendee_token:
+            return False
+        
+        # Create organizer user (will start as attendee, then we'll change role)
+        self.organizer_id, self.organizer_token = self.create_test_user("attendee")
+        if not self.organizer_token:
+            return False
+        
+        return True
 
     def test_health_check(self):
         """Test basic connectivity"""
