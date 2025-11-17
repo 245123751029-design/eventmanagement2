@@ -40,7 +40,7 @@ const Home = () => {
     try {
       setLoading(true);
       const params = {};
-      if (selectedCategory) params.category = selectedCategory;
+      if (selectedCategory && selectedCategory !== 'all') params.category = selectedCategory;
       if (searchQuery) params.search = searchQuery;
       
       const response = await axios.get(`${API}/events`, { params });
