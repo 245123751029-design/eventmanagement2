@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Calendar, User, LogOut, Plus, Ticket } from 'lucide-react';
+import { Calendar, User, LogOut, Plus, Ticket, Shield } from 'lucide-react';
 
 const Navbar = () => {
   const { user, login, logout } = useContext(AuthContext);
